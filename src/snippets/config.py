@@ -4,7 +4,8 @@ import shutil
 from configparser import ConfigParser, DEFAULTSECT
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, Any
+from warnings import warn
 
 
 __version__ = "2.0.0"
@@ -38,10 +39,26 @@ def _init_configdict(
             if auto_sectionalize:
                 section = DEFAULTSECT
             else:
-                raise ValueError("configdata must have section")
+                raise ValueError("Configdata must have section")
         data = {section: data}
 
-    return data
+    data_ret = dict()
+    for s, d in data.items():
+        if type(s) is not str:
+            warn(f"Section name must be string: s -> '{s}'")
+            s = str(s)
+        data_ret[s] = dict()
+
+        for k, v in d.items():
+            if type(k) is not str:
+                warn(f"Key must be string: {k} -> '{k}'")
+                k = str(k)
+            k_lower = k.lower()
+            if k != k_lower:
+                warn(f"Key must be lowercase: '{k}' -> '{k_lower}'")
+            data_ret[s][k_lower] = v
+
+    return data_ret
 
 
 class Config(object):
@@ -236,7 +253,7 @@ class Config(object):
     def __repr__(self) -> str:
         return f"{__class__.__name__}({repr(self.data)})"
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         if isinstance(__o, Config):
             # Config vs Config
             if self.to_dict(allsection=True) == __o.to_dict(allsection=True):
