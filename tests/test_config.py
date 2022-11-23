@@ -1,5 +1,5 @@
-from random import sample
 import shutil
+import math
 from pathlib import Path
 
 import pytest
@@ -27,21 +27,21 @@ def tempdir():
 
 @pytest.fixture(scope="function", autouse=False)
 def sampleconfig() -> Config:
-    data = dict(
-        DEFAULT = dict(
+    data = {
+        DEFAULTSECT: dict(
             x = "dx",
         ),
-        a = dict(
+        "a": dict(
             x = "ax",
             y = "ay",
             n = "1",
         ),
-        b = dict(
+        "b": dict(
             x = "bx",
             y = "by",
             n = "2",
         ),
-    )
+    }
     config = Config(data)
     config.save(CONFIGFILE, mode="write")
 
@@ -49,6 +49,28 @@ def sampleconfig() -> Config:
 
     Path(CONFIGFILE).unlink()
 
+
+@pytest.fixture(scope="function", autouse=False)
+def sampleconfig_cast() -> Config:
+    data = {
+        DEFAULTSECT: dict(
+            s1 = "Abc,123",
+            s2 = "1.5",
+            b = False,
+            i = -2,
+            f = 2.0,
+            l = ["", False],
+            t = (),
+            st = {7, 8},
+            d = dict(a=5, b="B"),
+        ),
+    }
+    config = Config(data)
+    config.save(CONFIGFILE, mode="write")
+
+    yield config
+
+    Path(CONFIGFILE).unlink()
 
 class TestConfig(object):
     def test_load(self, sampleconfig: Config):
@@ -94,6 +116,15 @@ class TestConfig(object):
         c["a"]["n"] = int(c["a"]["n"])
         c["a"]["m"] = 12
         assert config_load == c
+
+    def test_load_default_cast(self, sampleconfig_cast: Config):
+        config_load = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=True)
+        assert config_load.data[DEFAULTSECT].keys() == sampleconfig_cast.data[DEFAULTSECT].keys()
+        for k in config_load.data[DEFAULTSECT].keys():
+            if type(sampleconfig_cast[k]) is float:
+                assert math.isclose(config_load[k], sampleconfig_cast[k])
+            else:
+                assert config_load[k] == sampleconfig_cast[k]
 
     def test_save(self, sampleconfig: Config):
         data = dict(hoge=dict(fuga=5))
