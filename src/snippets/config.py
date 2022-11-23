@@ -192,10 +192,41 @@ class Config(object):
                     if self.cast:
                         try:
                             # cast to type of default value
-                            v = type(data_ret[s][k])(v)
+                            _type = type(data_ret[s][k])
+                            _raise = False
+                            if _type in [str]:
+                                pass
+                            elif _type in [float, int]:
+                                v = _type(v)
+                            elif _type in [bool]:
+                                if v.lower() in ["true", "1"]:
+                                    v = True
+                                elif v.lower() in ["false", "0"]:
+                                    v = False
+                                else:
+                                    _raise = True
+                            elif _type in [list]:
+                                if v.startswith("[") and v.endswith("]"):
+                                    v = eval(v)
+                                else:
+                                    _raise = True
+                            elif _type in [tuple]:
+                                if v.startswith("(") and v.endswith(")"):
+                                    v = eval(v)
+                                else:
+                                    _raise = True
+                            elif _type in [dict, set]:
+                                if v.startswith("{") and v.endswith("}"):
+                                    v = eval(v)
+                                else:
+                                    _raise = True
+                            if _raise:
+                                raise ValueError(f'{_type.__name__}("{v}")')
                         except ValueError as e:
                             if self.strict_cast:
                                 raise ValueError(e)
+                            else:
+                                warn(f"cast failed: {e}")
                 elif self.strict_key:
                     raise KeyError(k)
                 data_ret[s][k] = v
