@@ -18,7 +18,7 @@ class Config(object):
     def __init__(
         self,
         __d: Union[str, Path, dict, None] = DEFAULT_FILENAME,
-        section: Optional[str] = None,
+        section: str = DEFAULTSECT,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
         default: Optional[dict] = None,
@@ -30,7 +30,7 @@ class Config(object):
 
         Args:
             __d (str or Path or dict, optional): Configuration filepath or data(dict)
-            section (str, optional): Section (If None, load all sections)
+            section (str): Section
             encoding (str, optional): File encoding
             notfound_ok (bool, optional): If True, return empty dict.
             default (dict, optional): Default values of config
@@ -46,20 +46,25 @@ class Config(object):
             ValueError: If `strict_cast` is True and failed to cast.
             KeyError: If `strict_key` is True and some keys of configfile is not in default.
         """
+        self.section = section
         self.cast = cast
         self.strict_cast = strict_cast
         self.strict_key = strict_key
 
         self.filepath: Path
-        self.parser = ConfigParser()
+        self.default: dict
+        # self.parser = ConfigParser()
 
         if default is None:
-            self.default = dict()
-        else:
-            self.default = self.__init_configdict(default, section=section)
+            default = {section: {}}
+        self.default = self.__init_configdict(
+            default,
+            section=section,
+            # auto_sectionalize=True,
+        )
 
         if __d is None:
-            self.data = dict()
+            self.data = {section: {}}
         else:
             if type(__d) is dict:
                 file = None
@@ -70,14 +75,17 @@ class Config(object):
             self.data = self._load(
                 file=file,
                 data=data,
-                section=section,
                 encoding=encoding,
                 notfound_ok=notfound_ok,
             )
         return None
 
     @staticmethod
-    def __init_configdict(data: dict, section: Optional[str] = None):
+    def __init_configdict(
+        data: dict,
+        section: Optional[str] = None,
+        auto_sectionalize: bool = False,
+    ):
         have_section = True
         for v in data.values():
             if not isinstance(v, dict):
@@ -91,9 +99,11 @@ class Config(object):
                 data[section] = dict()
         else:
             if section is None:
-                raise ValueError("configdata must have section")
-            else:
-                data = {section: data}
+                if auto_sectionalize:
+                    section = DEFAULTSECT
+                else:
+                    raise ValueError("configdata must have section")
+            data = {section: data}
 
         return data
 
@@ -101,82 +111,125 @@ class Config(object):
         self,
         file: Union[str, Path, None] = None,
         data: Optional[dict] = None,
-        section: Optional[str] = None,
+        # section: Optional[str] = None,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
     ) -> dict:
+        section = None
         if (file is not None) and (data is not None):
             raise ValueError("Both file and data are given")
         elif file is not None:
             self.filepath = Path(file)
             if self.filepath.is_file():
+                parser = ConfigParser()
                 with self.filepath.open(mode="r", encoding=encoding) as f:
-                    self.parser.read_file(f)
-            elif not notfound_ok:
+                    parser.read_file(f)
+                data = self.__parser_to_dict(parser)
+            elif notfound_ok:
+                data = {DEFAULTSECT: {}}
+            else:
                 raise FileNotFoundError(file)
         elif data is not None:
-            try:
-                d = self.__init_configdict(data, section=section)
-            except ValueError:
-                d = self.__init_configdict(data, section=DEFAULTSECT)
-            self.parser.read_dict(d)
+            data = self.__init_configdict(
+                data,
+                section=section,
+                auto_sectionalize=True,
+            )
         else:
             raise ValueError("Both file and data are None")
 
-        allsection = section is None
-        if allsection:
-            sections_file = self.parser.sections()
-            if len(dict(self.parser[DEFAULTSECT])) > 0:
-                sections_file = [DEFAULTSECT] + sections_file
+        if section is None:
+            sections_load = list(data.keys())
         else:
-            sections_file = [section]
-        sections = sections_file.copy()
+            sections_load = [section]
 
+        if DEFAULTSECT not in sections_load:
+            sections_load = [DEFAULTSECT] + sections_load
+
+        # add default sections
         for k in self.default.keys():
-            if k not in sections:
-                sections.append(k)
+            if k not in sections_load:
+                sections_load.append(k)
 
-        data = dict()
-        for s in sections:
+        data_ret = dict()
+        for s in sections_load:
             if s in self.default:
-                data[s] = self.default[s].copy()
+                # initialize with default values
+                data_ret[s] = self.default[s].copy()
             else:
-                data[s] = dict()
-            if s not in sections_file:
+                data_ret[s] = dict()
+            if s not in data.keys():
                 continue
-            for k, v in dict(self.parser[s]).items():
-                if k in data[s]:
+            for k, v in data[s].items():
+                if k in data_ret[s]:
                     if self.cast:
                         try:
-                            # cast to type(default[k])
-                            v = type(data[s][k])(v)
+                            # cast to type of default value
+                            v = type(data_ret[s][k])(v)
                         except ValueError as e:
                             if self.strict_cast:
                                 raise ValueError(e)
                 elif self.strict_key:
                     raise KeyError(k)
-                data[s][k] = v
+                data_ret[s][k] = v
 
-        if not allsection:
-            data = data[section]
+        return data_ret
 
-        return data
+    @staticmethod
+    def __parser_to_dict(__p: ConfigParser) -> dict:
+        d = dict()
+        for k, v in __p.items():
+            d[k] = dict(v)
+        return d
 
-    def to_dict(self) -> dict:
-        __d = dict()
-        for k, v in self.parser.items():
-            __d[k] = dict(v)
-        return __d
+    def to_dict(self, allsection: bool = False) -> dict:
+        if allsection:
+            return self.data.copy()
+        else:
+            return self.data[self.section].copy()
+
+    def __getitem__(self, __key):
+        return self.data[self.section][__key]
+
+    def __setitem__(self, __key, __value) -> None:
+        if __key in self.data[self.section]:
+            if self.cast:
+                try:
+                    __value = type(self.data[self.section][__key])(__value)
+                except ValueError as e:
+                    if self.strict_cast:
+                        raise ValueError(e)
+        elif self.strict_key:
+            raise KeyError(__key)
+        self.data[self.section][__key] = __value
+        return None
+
+    def __str__(self) -> str:
+        return str(self.data)
+
+    def __repr__(self) -> str:
+        return f"{__class__.__name__}({repr(self.data)})"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Config):
             # Config vs Config
-            if self.parser == __o.parser:
+            if self.to_dict(allsection=True) == __o.to_dict(allsection=True):
+                return True
+        elif isinstance(__o, ConfigParser):
+            # Config vs ConfigParser
+            parser = ConfigParser()
+            parser.read_dict(self.data)
+            if parser == __o:
                 return True
         elif type(__o) is dict:
             # Config vs dict
-            if self.to_dict() == __o:
+            data = self.to_dict(allsection=True)
+            if data == __o:
                 return True
+            if len(data[DEFAULTSECT]) == 0:
+                del data[DEFAULTSECT]
+                if data == __o:
+                    return True
         return False
 
     def save(
@@ -221,11 +274,10 @@ class Config(object):
             if mode in ["i", "interactive"]:
                 mode = input(f"'{filepath.name}' already exists --> (over[w]rite/[a]dd/[l]eave/[c]ancel)?: ").lower()
             if mode in ["w", "write", "overwrite"]:
-                data_save = dict()
+                data_save = self._load(data=dict())
             elif mode in ["a", "add"]:
                 data_save = self._load(
                     file = file,
-                    section = None, 
                     encoding = encoding,
                     notfound_ok = True,
                 )
