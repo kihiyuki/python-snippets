@@ -103,7 +103,7 @@ class TestConfig(object):
             config.save(CONFIGFILE, mode="x")
 
     @pytest.mark.parametrize("mode", ["w", "Write", "OVERWRITE"])
-    def test_save_writemode(self, sampleconfig, mode):
+    def test_save_write(self, sampleconfig: Config, mode):
         data = dict(hoge=dict(fuga=5))
         data_str = dict(hoge=dict(fuga="5"))
         config = Config(data)
@@ -111,31 +111,35 @@ class TestConfig(object):
         config_load = Config(CONFIGFILE)
         assert config_load == data_str
 
-    @pytest.mark.skip()
-    @pytest.mark.parametrize("mode", ["a", "add"])
-    def test_save_add(self, sampleconfig, mode):
-        config = dict(a=dict(x="addx", z="addz"), b=dict(y="addy"))
-        configlib.config.save(config, file=CONFIGFILE, mode=mode)
-        config_load = configlib.config.load(file=CONFIGFILE)
-        sampleconfig["a"]["z"] = "addz"
+    @pytest.mark.parametrize("mode", ["a", "ADD"])
+    def test_save_add(self, sampleconfig: Config, mode):
+        data = dict(a=dict(x="addx", z="addz"), b=dict(y="addy"))
+        config = Config(data)
+        config.save(CONFIGFILE, mode=mode)
+        config_load = Config(CONFIGFILE)
+        sampleconfig.section = "a"
+        sampleconfig["x"] = "addx"
+        sampleconfig["z"] = "addz"
+        sampleconfig.section = "b"
+        sampleconfig["y"] = "addy"
         assert config_load == sampleconfig
 
     @pytest.mark.skip()
     @pytest.mark.parametrize("section", [None, "a", "c"])
     @pytest.mark.parametrize("has_section", [False, True])
-    def test_save_add_param(self, sampleconfig, section, has_section):
-        config = dict(x="addx", z="addz")
+    def test_save_add_param(self, sampleconfig: Config, section, has_section):
+        data = dict(x="addx", z="addz")
         if section is None:
             with pytest.raises(ValueError):
-                configlib.config.save(config, file=CONFIGFILE, mode="a", section=section)
+                configlib.config.save(data, CONFIGFILE, mode="a", section=section)
         else:
             configlib.config.save(
-                {section: config} if has_section else config,
-                file=CONFIGFILE,
+                {section: data} if has_section else data,
+                CONFIGFILE,
                 mode="a",
                 section=None if has_section else section,
             )
-            config_load = configlib.config.load(file=CONFIGFILE)
+            config_load = configlib.config.load(CONFIGFILE)
             c = sampleconfig.copy()
             if section == "c":
                 c[section] = dict()
@@ -146,8 +150,8 @@ class TestConfig(object):
     @pytest.mark.skip()
     @pytest.mark.parametrize("mode", ["l", "leave", "c", "cancel", "n", "no"])
     def test_save_leave(self, sampleconfig, mode):
-        config = dict(hoge=dict(fuga="5"))
-        configlib.config.save(config, file=CONFIGFILE, mode=mode)
-        config_load = configlib.config.load(file=CONFIGFILE)
-        assert config_load != config
+        data = dict(hoge=dict(fuga="5"))
+        configlib.config.save(data, CONFIGFILE, mode=mode)
+        config_load = configlib.config.load(CONFIGFILE)
+        assert config_load != data
         assert config_load == sampleconfig

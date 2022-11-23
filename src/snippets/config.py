@@ -277,9 +277,9 @@ class Config(object):
                 data_save = self._load(data=dict())
             elif mode in ["a", "add"]:
                 data_save = self._load(
-                    file = file,
-                    encoding = encoding,
-                    notfound_ok = True,
+                    file=file,
+                    encoding=encoding,
+                    notfound_ok=True,
                 )
             elif mode in ["l", "leave", "c", "cancel", "n", "no"]:
                 write = False
@@ -287,7 +287,11 @@ class Config(object):
             else:
                 raise ValueError(f"Unknown mode '{mode}'")
 
-            data_save.update(data)
+            for k in data.keys():
+                if k in data_save.keys():
+                    data_save[k].update(data[k])
+                else:
+                    data_save[k] = data[k]
 
             if keep_original_file:
                 filepath_back = filepath.parent / f"{filepath.name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
