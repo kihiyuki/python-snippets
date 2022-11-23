@@ -8,7 +8,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __all__ = [
     "Config",
 ]
@@ -206,17 +206,22 @@ class Config(object):
                                 if v.startswith("[") and v.endswith("]"):
                                     v = eval(v)
                                 else:
-                                    _raise = True
+                                    v = v.split(",")
                             elif _type in [tuple]:
                                 if v.startswith("(") and v.endswith(")"):
                                     v = eval(v)
                                 else:
-                                    _raise = True
-                            elif _type in [dict, set]:
+                                    v = tuple(v.split(","))
+                            elif _type in [set]:
                                 if v.startswith("{") and v.endswith("}"):
                                     v = eval(v)
                                 else:
-                                    _raise = True
+                                    v = set(v.split(","))
+                            elif _type in [dict]:
+                                if v.startswith("{") and v.endswith("}"):
+                                    v = eval(v)
+                                else:
+                                    v = dict(tuple(x.split(":")) for x in v.split(","))   
                             if _raise:
                                 raise ValueError(f'{_type.__name__}("{v}")')
                         except ValueError as e:
