@@ -1,5 +1,5 @@
 # https://github.com/kihiyuki/python-snippets
-# MIT License
+# LICENSE: MIT License
 import shutil
 from configparser import ConfigParser, DEFAULTSECT
 from datetime import datetime
@@ -76,17 +76,14 @@ class Config(object):
         """Read configuration file/data and convert its section to dict.
 
         Args:
-            __d (str or Path or dict, optional): Configuration filepath or data(dict)
-            section (str): Section
-            encoding (str, optional): File encoding
-            notfound_ok (bool, optional): If True, return empty dict.
-            default (dict, optional): Default values of config
-            cast (bool, optional): If True, cast to type of default value.
-            strict_cast (bool, optional): If False, cast as much as possible.
-            strict_key (bool, optional): If False, keys can be added.
-
-        Returns:
-            dict
+            __d: Configuration filepath(str or Path) or data(dict)
+            section: Section
+            encoding: File encoding
+            notfound_ok: If True, return empty dict.
+            default: Default values
+            cast: If True, cast to type of default value.
+            strict_cast: If False, cast as much as possible.
+            strict_key: If False, keys can be added.
 
         Raises:
             FileNotFoundError: If `notfound_ok` is False and `file` not found.
@@ -241,6 +238,18 @@ class Config(object):
         return d
 
     def to_dict(self, allsection: bool = False) -> dict:
+        """Convert to dict
+
+        Example:
+            >>> config = Config("./config.ini", section="a")
+            >>> config.to_dict(allsection=True)
+            {"DEFAULT": {"v": "xxx"}, "a": {"v": "yyy"}, "b": {"v": "zzz"}}
+            >>> config.to_dict()
+            {"v": "yyy"}
+            >>> config.section = "b"
+            >>> config.to_dict()
+            {"v": "zzz"}
+        """
         if allsection:
             return self.data.copy()
         else:
@@ -317,16 +326,13 @@ class Config(object):
         """Save configuration dict to file.
 
         Args:
-            file (str or Path, optional): Configuration file path
-            section (str, optional): Section (if single-section data)
-            encoding (str, optional): File encoding
-            mode (str, optional): 'interactive', 'write'('overwrite'), 'add', 'leave'
-            exist_ok (bool, optional): If False and file exists, raise an error.
-            overwrite (bool, optional): If True and file exists, overwrite.
-            keep_original_file (bool, optional): If True, keep(copy) original file.
-
-        Returns:
-            None
+            file: Configuration file path
+            section: Section (if single-section data)
+            encoding: File encoding
+            mode: 'interactive', 'write'('overwrite'), 'add', 'leave'
+            exist_ok: If False and file exists, raise an error.
+            overwrite: If True and file exists, overwrite.
+            keep_original_file: If True, keep(copy) original file.
 
         Raises:
             ValueError: If `mode` is unknown
