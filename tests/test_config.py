@@ -67,9 +67,9 @@ class TestConfig(object):
         assert config_load == sampleconfig
         # load all section when choose a section which is not exists
         config_load = Config(CONFIGFILE, section="xxx")
-        _config: dict = sampleconfig.to_dict(allsection=True)
-        _config.update({"xxx": {}})
-        assert config_load == _config
+        c: dict = sampleconfig.to_dict(allsection=True)
+        c.update({"xxx": {}})
+        assert config_load == c
 
     def test_load_default(self, sampleconfig: Config):
         default = dict(n=11, m=12)
@@ -124,34 +124,30 @@ class TestConfig(object):
         sampleconfig["y"] = "addy"
         assert config_load == sampleconfig
 
-    @pytest.mark.skip()
-    @pytest.mark.parametrize("section", [None, "a", "c"])
+    @pytest.mark.parametrize("section", [DEFAULTSECT, "a", "c"])
     @pytest.mark.parametrize("has_section", [False, True])
     def test_save_add_param(self, sampleconfig: Config, section, has_section):
         data = dict(x="addx", z="addz")
-        if section is None:
-            with pytest.raises(ValueError):
-                configlib.config.save(data, CONFIGFILE, mode="a", section=section)
-        else:
-            configlib.config.save(
-                {section: data} if has_section else data,
-                CONFIGFILE,
-                mode="a",
-                section=None if has_section else section,
-            )
-            config_load = configlib.config.load(CONFIGFILE)
-            c = sampleconfig.copy()
-            if section == "c":
-                c[section] = dict()
-                c[section]["x"] = "addx"
-            c[section]["z"] = "addz"
-            assert c == config_load
+        if has_section:
+            data = {section: data}
+        config = Config(data, section=section)
+        config_load = Config(CONFIGFILE, section=section)
+        config.save(CONFIGFILE, mode="a")
+        config_load_aftersave = Config(CONFIGFILE, section=section)
 
-    @pytest.mark.skip()
-    @pytest.mark.parametrize("mode", ["l", "leave", "c", "cancel", "n", "no"])
+        config_load["x"] = "addx"
+        config_load["z"] = "addz"
+        if section == DEFAULTSECT:
+            config_load.data["a"]["z"] = "addz"
+            config_load.data["b"]["z"] = "addz"
+
+        assert config_load == config_load_aftersave
+
+    @pytest.mark.parametrize("mode", ["l", "leave", "c", "Cancel", "N", "no"])
     def test_save_leave(self, sampleconfig, mode):
         data = dict(hoge=dict(fuga="5"))
-        configlib.config.save(data, CONFIGFILE, mode=mode)
-        config_load = configlib.config.load(CONFIGFILE)
+        config = Config(data)
+        config.save(CONFIGFILE, mode=mode)
+        config_load = Config(CONFIGFILE)
         assert config_load != data
         assert config_load == sampleconfig

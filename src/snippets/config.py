@@ -4,7 +4,7 @@ import shutil
 from configparser import ConfigParser, DEFAULTSECT
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 
 
 __version__ = "2.0.0"
@@ -12,6 +12,36 @@ __all__ = [
     "Config",
 ]
 DEFAULT_FILENAME: Optional[str] = "./config.ini"
+
+
+def _have_section(data: dict) -> bool:
+    have_section = True
+    for v in data.values():
+        if not isinstance(v, dict):
+            have_section = False
+            break
+    return have_section
+
+
+def _init_configdict(
+    data: dict,
+    section: Optional[str] = None,
+    auto_sectionalize: bool = False,
+) -> Dict[str, dict]:
+    if _have_section(data):
+        if section is None:
+            pass
+        elif section not in data:
+            data[section] = dict()
+    else:
+        if section is None:
+            if auto_sectionalize:
+                section = DEFAULTSECT
+            else:
+                raise ValueError("configdata must have section")
+        data = {section: data}
+
+    return data
 
 
 class Config(object):
@@ -57,9 +87,11 @@ class Config(object):
 
         if default is None:
             default = {section: {}}
-        self.default = self.__init_configdict(
+        if not _have_section(default):
+            default = {section: default}
+        self.default = _init_configdict(
             default,
-            section=section,
+            # section=section,
             # auto_sectionalize=True,
         )
 
@@ -69,6 +101,8 @@ class Config(object):
             if type(__d) is dict:
                 file = None
                 data = __d
+                if not _have_section(data):
+                    data = {section: data}
             else:
                 file = __d
                 data = None
@@ -80,42 +114,14 @@ class Config(object):
             )
         return None
 
-    @staticmethod
-    def __init_configdict(
-        data: dict,
-        section: Optional[str] = None,
-        auto_sectionalize: bool = False,
-    ):
-        have_section = True
-        for v in data.values():
-            if not isinstance(v, dict):
-                have_section = False
-                break
-
-        if have_section:
-            if section is None:
-                pass
-            elif section not in data:
-                data[section] = dict()
-        else:
-            if section is None:
-                if auto_sectionalize:
-                    section = DEFAULTSECT
-                else:
-                    raise ValueError("configdata must have section")
-            data = {section: data}
-
-        return data
-
     def _load(
         self,
         file: Union[str, Path, None] = None,
         data: Optional[dict] = None,
-        # section: Optional[str] = None,
+        section: Optional[str] = None,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
     ) -> dict:
-        section = None
         if (file is not None) and (data is not None):
             raise ValueError("Both file and data are given")
         elif file is not None:
@@ -130,9 +136,13 @@ class Config(object):
             else:
                 raise FileNotFoundError(file)
         elif data is not None:
-            data = self.__init_configdict(
+            if _have_section(data):
+                pass
+            elif section is not None:
+                data = {section: data}
+            data = _init_configdict(
                 data,
-                section=section,
+                # section=section,
                 auto_sectionalize=True,
             )
         else:
@@ -188,11 +198,27 @@ class Config(object):
         else:
             return self.data[self.section].copy()
 
+    def copy(self):
+        return type(self)(
+            self.data,
+            section=self.section,
+            default=self.default,
+            cast=self.cast,
+            strict_cast=self.strict_cast,
+            strict_key=self.strict_key,
+        )
+
     def __getitem__(self, __key):
         return self.data[self.section][__key]
 
     def __setitem__(self, __key, __value) -> None:
-        if __key in self.data[self.section]:
+        if self.section not in self.data.keys():
+            if self.strict_key:
+                raise KeyError(self.section)
+            else:
+                self.data[self.section] = dict()
+
+        if __key in self.data[self.section].keys():
             if self.cast:
                 try:
                     __value = type(self.data[self.section][__key])(__value)
@@ -268,7 +294,6 @@ class Config(object):
             # use only specified section
             data = {section: self.data[section]}
 
-        write = True
         if filepath.is_file():
             mode = mode.lower()
             if mode in ["i", "interactive"]:
@@ -282,8 +307,7 @@ class Config(object):
                     notfound_ok=True,
                 )
             elif mode in ["l", "leave", "c", "cancel", "n", "no"]:
-                write = False
-                keep_original_file = False
+                return None
             else:
                 raise ValueError(f"Unknown mode '{mode}'")
 
@@ -299,9 +323,8 @@ class Config(object):
         else:
             data_save = data
 
-        if write:
-            parser = ConfigParser()
-            parser.read_dict(data_save)
-            with filepath.open(mode="w", encoding=encoding) as f:
-                parser.write(f)
+        parser = ConfigParser()
+        parser.read_dict(data_save)
+        with filepath.open(mode="w", encoding=encoding) as f:
+            parser.write(f)
         return None
