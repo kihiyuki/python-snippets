@@ -4,11 +4,11 @@ import gzip
 import lzma
 import bz2
 
-_failedmodules = []
+_failedmodules = dict()
 try:
     from chardet import detect
-except ImportError:
-    _failedmodules.append("chardet")
+except Exception as e:
+    _failedmodules["chardet"] = e
 
 
 __version__ = "0.0.1"
@@ -58,7 +58,7 @@ class File(object):
 
     def __detect_encoding(self) -> None:
         if "chardet" in _failedmodules:
-            ImportError("chardet")
+            raise _failedmodules["chardet"]
         with self.__open(mode="rb") as f:
             b = f.read(16)  # hardcode
             self.encoding = detect(b)["encoding"]
