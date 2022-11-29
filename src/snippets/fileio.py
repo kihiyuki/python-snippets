@@ -13,14 +13,8 @@ except Exception as e:
 
 __version__ = "0.0.1"
 __all__ = [
+    "File"
 ]
-
-_OPENFUNCTIONS = {
-    None: open,
-    "gzip": gzip.open,
-    "xz": lzma.open,
-    "bz2": bz2.open,
-}
 
 
 class File(object):
@@ -49,8 +43,18 @@ class File(object):
         return str(self.path)
 
     def __open(self, mode: str):
-        _func = _OPENFUNCTIONS[self.compression]
-        return _func(
+        if self.compression is None:
+            _open = open
+        elif self.compression == "gzip":
+            _open = gzip.open
+        elif self.compression == "xz":
+            _open = lzma.open
+        elif self.compression == "bz2":
+            _open = bz2.open
+        else:
+            raise ValueError("invalid compression mode")
+
+        return _open(
             self.path,
             mode=mode,
             encoding=self.encoding if self.compression is None else None
@@ -74,13 +78,19 @@ class File(object):
             self.encoding = encoding
         return self.__open(mode=mode)
 
-    def readlines(self, rstrip=True) -> List[str]:
-        if (self.compression is None) or (self.encoding is None):
+    def readlines(
+        self,
+        rstrip: bool = True,
+        encoding: Optional[str] = None,
+    ) -> List[str]:
+        if encoding is None:
+            encoding = self.encoding
+        if (self.compression is None) or (encoding is None):
             with self.__open(mode="r") as f:
                 lines = f.readlines()
         else:
             with self.__open(mode="rb") as f:
-                lines = [x.decode(self.encoding) for x in  f.readlines()]
+                lines = [x.decode(encoding) for x in  f.readlines()]
         if rstrip:
             lines = [x.rstrip() for x in lines]
         return lines
