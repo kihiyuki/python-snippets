@@ -221,7 +221,7 @@ class Config(object):
                                 if v.startswith("{") and v.endswith("}"):
                                     v = eval(v)
                                 else:
-                                    v = dict(tuple(x.split(":")) for x in v.split(","))   
+                                    v = dict(tuple(x.split(":")) for x in v.split(","))
                             if _raise:
                                 raise ValueError(f'{_type.__name__}("{v}")')
                         except ValueError as e:
