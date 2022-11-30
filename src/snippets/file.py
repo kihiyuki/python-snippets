@@ -11,7 +11,7 @@ except Exception as e:
     _failedmodules["chardet"] = e
 
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __all__ = [
     "File"
 ]
@@ -94,7 +94,10 @@ class File(object):
                 lines = f.readlines()
         else:
             with self.__open(mode="rb") as f:
-                lines = [x.decode(encoding) for x in f.readlines()]
+                if encoding is None:
+                    lines = [x.decode() for x in f.readlines()]
+                else:
+                    lines = [x.decode(encoding) for x in f.readlines()]
         if rstrip:
             lines = [x.rstrip() for x in lines]
         return lines
