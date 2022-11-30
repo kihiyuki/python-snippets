@@ -49,4 +49,4 @@ jobs:
         # mypy src
     - name: Test with pytest
       run: |
-        pytest -l --cov=./src/rsdict
+        pytest -l --cov=./src/snippets
