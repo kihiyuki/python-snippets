@@ -42,7 +42,11 @@ class File(object):
     def __str__(self) -> str:
         return str(self.path)
 
-    def __open(self, mode: str):
+    def __open(
+        self,
+        mode: str,
+        encoding: Optional[str] = None,
+    ):
         if self.compression is None:
             _open = open
         elif self.compression == "gzip":
@@ -54,10 +58,13 @@ class File(object):
         else:
             raise ValueError("invalid compression mode")
 
+        if encoding is None:
+            encoding = self.encoding if self.compression is None else None
+
         return _open(
             self.path,
             mode=mode,
-            encoding=self.encoding if self.compression is None else None
+            encoding=encoding,
         )
 
     def __detect_encoding(self) -> None:
@@ -85,12 +92,12 @@ class File(object):
     ) -> List[str]:
         if encoding is None:
             encoding = self.encoding
-        if (self.compression is None) or (encoding is None):
-            with self.__open(mode="r") as f:
+        if self.compression is None:
+            with self.__open(mode="r", encoding=encoding) as f:
                 lines = f.readlines()
         else:
             with self.__open(mode="rb") as f:
-                lines = [x.decode(encoding) for x in  f.readlines()]
+                lines = [x.decode(encoding) for x in f.readlines()]
         if rstrip:
             lines = [x.rstrip() for x in lines]
         return lines
