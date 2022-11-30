@@ -1,3 +1,6 @@
+# https://github.com/kihiyuki/python-snippets
+# Copyright (c) 2022 kihiyuki
+# Released under the MIT license
 from typing import Optional, List
 from pathlib import Path
 import gzip

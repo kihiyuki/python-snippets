@@ -1,5 +1,6 @@
 # https://github.com/kihiyuki/python-snippets
-# LICENSE: MIT License
+# Copyright (c) 2022 kihiyuki
+# Released under the MIT license
 import shutil
 from configparser import ConfigParser, DEFAULTSECT
 from datetime import datetime
