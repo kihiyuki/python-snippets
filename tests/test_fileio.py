@@ -25,7 +25,11 @@ def filename():
         p.unlink()
 
 
-def write(filename, encoding: Optional[str] = None, compression: Optional[str] = None):
+def write(
+    filename: str,
+    encoding: Optional[str] = None,
+    compression: Optional[str] = None
+) -> str:
     if encoding is None:
         data = S.encode()
     else:
@@ -34,27 +38,55 @@ def write(filename, encoding: Optional[str] = None, compression: Optional[str] =
     if compression is None:
         pass
     elif compression == "gzip":
+        filename += ".gz"
         data = gzip.compress(data)
     elif compression == "xz":
+        filename += ".xz"
         data = lzma.compress(data)
     elif compression == "bz2":
+        filename += ".bz2"
         data = bz2.compress(data)
 
     with open(filename, mode="wb") as f:
         f.write(data)
-
+    return filename
 
 
 class TestFile(object):
+    @pytest.mark.parametrize("compression", COMPRESSIONS)
     @pytest.mark.parametrize("encoding", ENCODINGS)
     @pytest.mark.parametrize("detect_encoding", [False, True])
-    def test_hoge(self, filename: str, encoding: str, detect_encoding: bool):
-        write(filename, encoding=encoding)
+    def test_file(
+        self,
+        filename: str,
+        compression: Optional[str],
+        encoding: Optional[str],
+        detect_encoding: bool,
+    ) -> None:
+        filename = write(filename, encoding=encoding, compression=compression)
         file = File(filename, detect_encoding=detect_encoding)
+        assert str(filename) == str(file)
+
         encoding_read = encoding
         if detect_encoding:
             encoding_read = None
         elif WINDOWS and (encoding is None):
             encoding_read = "utf-8"
         lines = file.readlines(encoding=encoding_read)
+        assert lines == LINES
+        return None
+
+    @pytest.mark.parametrize("encoding", ENCODINGS)
+    def test_open(
+        self,
+        filename: str,
+        encoding: Optional[str],
+    ) -> None:
+        filename = write(filename, encoding=encoding)
+        file = File(filename)
+        if WINDOWS and (encoding is None):
+            encoding = "utf-8"
+        with file.open(encoding=encoding) as f:
+            lines = f.readlines()
+        lines = [x.rstrip() for x in lines]
         assert lines == LINES

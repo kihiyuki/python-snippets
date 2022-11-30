@@ -73,7 +73,6 @@ class File(object):
         with self.__open(mode="rb") as f:
             b = f.read(16)  # hardcode
             self.encoding = detect(b)["encoding"]
-        # print("encoding", self.encoding)
         return None
 
     def open(
@@ -81,9 +80,7 @@ class File(object):
         mode: str = "r",
         encoding: Optional[str] = None,
     ):
-        if encoding is not None:
-            self.encoding = encoding
-        return self.__open(mode=mode)
+        return self.__open(mode=mode, encoding=encoding)
 
     def readlines(
         self,
