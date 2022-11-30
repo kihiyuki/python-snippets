@@ -6,7 +6,7 @@ from typing import Optional
 
 import pytest
 
-from src.snippets.fileio import File
+from src.snippets.file import File
 
 WINDOWS = os.name == "nt"
 
