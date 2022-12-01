@@ -14,7 +14,7 @@ except Exception as e:
     _failedmodules["chardet"] = e
 
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __all__ = [
     "File"
 ]
@@ -44,6 +44,9 @@ class File(object):
 
     def __str__(self) -> str:
         return str(self.path)
+
+    def __repr__(self) -> str:
+        return f"File({self.__str__()})"
 
     def open(
         self,
