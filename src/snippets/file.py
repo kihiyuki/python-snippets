@@ -45,9 +45,9 @@ class File(object):
     def __str__(self) -> str:
         return str(self.path)
 
-    def __open(
+    def open(
         self,
-        mode: str,
+        mode: str = "r",
         encoding: Optional[str] = None,
     ):
         if self.compression is None:
@@ -73,17 +73,10 @@ class File(object):
     def __detect_encoding(self) -> None:
         if "chardet" in _failedmodules:
             raise _failedmodules["chardet"]
-        with self.__open(mode="rb") as f:
+        with self.open(mode="rb") as f:
             b = f.read(16)  # hardcode
             self.encoding = detect(b)["encoding"]
         return None
-
-    def open(
-        self,
-        mode: str = "r",
-        encoding: Optional[str] = None,
-    ):
-        return self.__open(mode=mode, encoding=encoding)
 
     def readlines(
         self,
@@ -93,10 +86,10 @@ class File(object):
         if encoding is None:
             encoding = self.encoding
         if self.compression is None:
-            with self.__open(mode="r", encoding=encoding) as f:
+            with self.open(mode="r", encoding=encoding) as f:
                 lines = f.readlines()
         else:
-            with self.__open(mode="rb") as f:
+            with self.open(mode="rb") as f:
                 if encoding is None:
                     lines = [x.decode() for x in f.readlines()]
                 else:
