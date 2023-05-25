@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 __all__ = [
     "Config",
 ]
@@ -92,9 +92,9 @@ class Config(object):
             KeyError: If `strict_key` is True and some keys of configfile is not in default.
         """
         self.section = section
-        self.cast = cast
-        self.strict_cast = strict_cast
-        self.strict_key = strict_key
+        self._cast = cast
+        self._strict_cast = strict_cast
+        self._strict_key = strict_key
 
         self.filepath: Path
         self.default: dict
@@ -127,6 +127,71 @@ class Config(object):
                 encoding=encoding,
                 notfound_ok=notfound_ok,
             )
+        return None
+
+    def cast(
+        self,
+        __key: Optional[Any] = None,
+        value: Optional[str] = None,
+        value_default: Optional[Any] = None,
+    ) -> Optional[Any]:
+        def __cast_single(__v: str, __v_def: Any) -> Any:
+            try:
+                # cast to type of default value
+                _type = type(__v_def)
+                _raise = False
+                if _type in [str]:
+                    pass
+                elif _type in [float, int]:
+                    __v = _type(__v)
+                elif _type in [bool]:
+                    if __v.lower() in ["true", "1"]:
+                        __v = True
+                    elif __v.lower() in ["false", "0"]:
+                        __v = False
+                    else:
+                        _raise = True
+                elif _type in [list]:
+                    if __v.startswith("[") and __v.endswith("]"):
+                        __v = eval(__v)
+                    else:
+                        __v = __v.split(",")
+                elif _type in [tuple]:
+                    if __v.startswith("(") and __v.endswith(")"):
+                        __v = eval(__v)
+                    else:
+                        __v = tuple(__v.split(","))
+                elif _type in [set]:
+                    if __v.startswith("{") and __v.endswith("}"):
+                        __v = eval(__v)
+                    else:
+                        __v = set(__v.split(","))
+                elif _type in [dict]:
+                    if __v.startswith("{") and __v.endswith("}"):
+                        __v = eval(__v)
+                    else:
+                        __v = dict(tuple(x.split(":")) for x in __v.split(","))
+                if _raise:
+                    raise ValueError(f'{_type.__name__}("{__v}")')
+            except ValueError as e:
+                if self._strict_cast:
+                    raise ValueError(e)
+                else:
+                    warn(f"cast failed: {e}")
+            return __v
+
+        if value is not None:
+            if value_default is not None:
+                return __cast_single(value, value_default)
+                # __key, self.data[__key]
+            else:
+                raise ValueError()
+        elif __key is not None:
+            self.data[__key] = __cast_single(self.data[__key], self.default[__key])
+        else:
+            for k in self.data.keys():
+                if k in self.default.keys():
+                    self.data[k] = __cast_single(self.data[k], self.default[k])
         return None
 
     def _load(
@@ -187,50 +252,9 @@ class Config(object):
                 continue
             for k, v in data[s].items():
                 if k in data_ret[s]:
-                    if self.cast:
-                        try:
-                            # cast to type of default value
-                            _type = type(data_ret[s][k])
-                            _raise = False
-                            if _type in [str]:
-                                pass
-                            elif _type in [float, int]:
-                                v = _type(v)
-                            elif _type in [bool]:
-                                if v.lower() in ["true", "1"]:
-                                    v = True
-                                elif v.lower() in ["false", "0"]:
-                                    v = False
-                                else:
-                                    _raise = True
-                            elif _type in [list]:
-                                if v.startswith("[") and v.endswith("]"):
-                                    v = eval(v)
-                                else:
-                                    v = v.split(",")
-                            elif _type in [tuple]:
-                                if v.startswith("(") and v.endswith(")"):
-                                    v = eval(v)
-                                else:
-                                    v = tuple(v.split(","))
-                            elif _type in [set]:
-                                if v.startswith("{") and v.endswith("}"):
-                                    v = eval(v)
-                                else:
-                                    v = set(v.split(","))
-                            elif _type in [dict]:
-                                if v.startswith("{") and v.endswith("}"):
-                                    v = eval(v)
-                                else:
-                                    v = dict(tuple(x.split(":")) for x in v.split(","))
-                            if _raise:
-                                raise ValueError(f'{_type.__name__}("{v}")')
-                        except ValueError as e:
-                            if self.strict_cast:
-                                raise ValueError(e)
-                            else:
-                                warn(f"cast failed: {e}")
-                elif self.strict_key:
+                    if self._cast:
+                        v = self.cast(value=v, value_default=data_ret[s][k])
+                elif self._strict_key:
                     raise KeyError(k)
                 data_ret[s][k] = v
 
@@ -267,8 +291,8 @@ class Config(object):
             section=self.section,
             default=self.default,
             cast=self.cast,
-            strict_cast=self.strict_cast,
-            strict_key=self.strict_key,
+            strict_cast=self._strict_cast,
+            strict_key=self._strict_key,
         )
 
     def __getitem__(self, __key):
@@ -276,7 +300,7 @@ class Config(object):
 
     def __setitem__(self, __key, __value) -> None:
         if self.section not in self.data.keys():
-            if self.strict_key:
+            if self._strict_key:
                 raise KeyError(self.section)
             else:
                 self.data[self.section] = dict()
@@ -286,9 +310,9 @@ class Config(object):
                 try:
                     __value = type(self.data[self.section][__key])(__value)
                 except ValueError as e:
-                    if self.strict_cast:
+                    if self._strict_cast:
                         raise ValueError(e)
-        elif self.strict_key:
+        elif self._strict_key:
             raise KeyError(__key)
         self.data[self.section][__key] = __value
         return None
