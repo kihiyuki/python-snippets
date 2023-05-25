@@ -135,9 +135,15 @@ class Config(object):
         value: Optional[str] = None,
         value_default: Optional[Any] = None,
     ) -> Optional[Any]:
+        """Cast to type of default value
+
+        Example:
+            >>> config.cast()
+            >>> config.cast("key1")
+            >>> config.cast(value="2", value_default=0)
+        """
         def __cast_single(__v: str, __v_def: Any) -> Any:
             try:
-                # cast to type of default value
                 _type = type(__v_def)
                 _raise = False
                 if _type in [str]:
@@ -183,9 +189,8 @@ class Config(object):
         if value is not None:
             if value_default is not None:
                 return __cast_single(value, value_default)
-                # __key, self.data[__key]
             else:
-                raise ValueError()
+                raise ValueError("If value is set, value_default is required")
         elif __key is not None:
             self.data[__key] = __cast_single(self.data[__key], self.default[__key])
         else:
@@ -222,7 +227,6 @@ class Config(object):
                 data = {section: data}
             data = _init_configdict(
                 data,
-                # section=section,
                 auto_sectionalize=True,
             )
         else:
