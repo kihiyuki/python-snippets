@@ -9,20 +9,11 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 __all__ = [
     "Config",
 ]
 DEFAULTFILE: Optional[str] = "config.ini"
-
-
-def _have_section(data: dict) -> bool:
-    have_section = True
-    for v in data.values():
-        if not isinstance(v, dict):
-            have_section = False
-            break
-    return have_section
 
 
 def _init_configdict(
@@ -30,7 +21,7 @@ def _init_configdict(
     section: Optional[str] = None,
     auto_sectionalize: bool = False,
 ) -> Dict[str, dict]:
-    if _have_section(data):
+    if Config._have_section(data):
         if section is None:
             pass
         elif section not in data:
@@ -46,17 +37,17 @@ def _init_configdict(
     data_ret = dict()
     for s, d in data.items():
         if type(s) is not str:
-            warn(f"Section name must be string: s -> '{s}'")
+            warn(f"Convert section name to string: {s} -> '{s}'")
             s = str(s)
         data_ret[s] = dict()
 
         for k, v in d.items():
             if type(k) is not str:
-                warn(f"Key must be string: {k} -> '{k}'")
+                warn(f"Convert key to string: {k} -> '{k}'")
                 k = str(k)
             k_lower = k.lower()
             if k != k_lower:
-                warn(f"Key must be lowercase: '{k}' -> '{k_lower}'")
+                warn(f"Conver key to lowercase: '{k}' -> '{k_lower}'")
             data_ret[s][k_lower] = v
 
     return data_ret
@@ -91,33 +82,39 @@ class Config(object):
             ValueError: If `strict_cast` is True and failed to cast.
             KeyError: If `strict_key` is True and some keys of configfile is not in default.
         """
-        self.section = section
         self._cast = cast
         self._strict_cast = strict_cast
         self._strict_key = strict_key
 
         self.filepath: Path
-        self.default: dict
+        self.default: Dict[Any, dict]
+        self.data: Dict[Any, dict]
         # self.parser = ConfigParser()
 
+        if type(section) is not str:
+            warn(f"Convert section name to string: {section} -> '{section}'")
+            self.section = str(section)
+        else:
+            self.section = section
+
         if default is None:
-            default = {section: {}}
-        if not _have_section(default):
-            default = {section: default}
+            default = {self.section: {}}
+        if not self._have_section(default):
+            default = {self.section: default}
         self.default = _init_configdict(
             default,
-            # section=section,
+            section=self.section,
             # auto_sectionalize=True,
         )
 
         if __d is None:
-            self.data = {section: {}}
+            self.data = {self.section: {}}
         else:
             if type(__d) is dict:
                 file = None
                 data = __d
-                if not _have_section(data):
-                    data = {section: data}
+                if not self._have_section(data):
+                    data = {self.section: data}
             else:
                 file = __d
                 data = None
@@ -128,6 +125,11 @@ class Config(object):
                 notfound_ok=notfound_ok,
             )
         return None
+
+    @staticmethod
+    def _have_section(data: dict) -> bool:
+        """Check if all values of 'data' are dictionaries"""
+        return all([isinstance(v, dict) for v in data.values()])
 
     def _cast_value(self, __v: str, __v_def: Any) -> Any:
         try:
@@ -221,7 +223,7 @@ class Config(object):
             else:
                 raise FileNotFoundError(file)
         elif data is not None:
-            if _have_section(data):
+            if self._have_section(data):
                 pass
             elif section is not None:
                 data = {section: data}
@@ -289,14 +291,25 @@ class Config(object):
         else:
             return self.data[self.section].copy()
 
-    def copy(self):
+    def copy(
+        self,
+        cast: Optional[bool] = None,
+        strict_key: Optional[bool] = None,
+        strict_cast: Optional[bool] = None,
+        ):
+        if cast is None:
+            cast = self._cast
+        if strict_key is None:
+            strict_key = self._strict_key
+        if strict_cast is None:
+            strict_cast = self._strict_cast
         return type(self)(
             self.data,
             section=self.section,
             default=self.default,
-            cast=self.cast,
-            strict_cast=self._strict_cast,
-            strict_key=self._strict_key,
+            cast=cast,
+            strict_cast=strict_cast,
+            strict_key=strict_key,
         )
 
     def __getitem__(self, __key):
@@ -310,7 +323,7 @@ class Config(object):
                 self.data[self.section] = dict()
 
         if __key in self.data[self.section].keys():
-            if self.cast:
+            if self._cast:
                 try:
                     __value = type(self.data[self.section][__key])(__value)
                 except ValueError as e:

@@ -56,7 +56,8 @@ def sampleconfig_cast() -> Config:
         DEFAULTSECT: dict(
             s1 = "Abc,123",
             s2 = "1.5",
-            b = False,
+            b1 = True,
+            b2 = False,
             i = -2,
             f = 2.0,
             l = ["", False],
@@ -73,6 +74,27 @@ def sampleconfig_cast() -> Config:
     Path(CONFIGFILE).unlink()
 
 class TestConfig(object):
+    def test_init(self):
+        c = Config(None)
+        assert c == {}
+        assert c.to_dict() == {}
+        assert c.to_dict(allsection=True) == {DEFAULTSECT: {}}
+
+        c = Config({123: {"N":10, 1.5:12}})
+        assert c.section == "DEFAULT"
+        c.section = "123"
+        assert c["n"] == 10
+        assert c["1.5"] == 12
+        assert c.to_dict(allsection=True)["123"]["n"] == 10
+        assert c.to_dict(allsection=True)["123"]["1.5"] == 12
+
+        c = Config({"N":10, 1.5:12}, section=123)
+        assert c.section == "123"
+        assert c["n"] == 10
+        assert c["1.5"] == 12
+        assert c.to_dict(allsection=True)["123"]["n"] == 10
+        assert c.to_dict(allsection=True)["123"]["1.5"] == 12
+
     def test_load(self, sampleconfig: Config):
         config_load = Config(CONFIGFILE)
         assert config_load == sampleconfig
@@ -119,12 +141,53 @@ class TestConfig(object):
 
     def test_load_default_cast(self, sampleconfig_cast: Config):
         config_load = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=True)
+        config_load_str = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=False)
+        for k in config_load_str.data[DEFAULTSECT].keys():
+            config_load_str.data[DEFAULTSECT][k] = str(config_load_str.data[DEFAULTSECT][k])
         assert config_load.data[DEFAULTSECT].keys() == sampleconfig_cast.data[DEFAULTSECT].keys()
-        for k in config_load.data[DEFAULTSECT].keys():
-            if type(sampleconfig_cast[k]) is float:
-                assert math.isclose(config_load[k], sampleconfig_cast[k])
+
+        def _compare(c1, c2, _k):
+            if (type(c1[_k]) is float) and (type(c2[_k]) is float):
+                return math.isclose(c1[_k], c2[_k])
             else:
-                assert config_load[k] == sampleconfig_cast[k]
+                return c1[_k] == c2[_k]
+
+        for k in config_load.data[DEFAULTSECT].keys():
+            _c = config_load_str.copy()
+            for k in _c.data[DEFAULTSECT].keys():
+                # check if the data copied correctly
+                assert type(_c.data[DEFAULTSECT][k]) is str
+            # cast by key
+            _c.cast(k, section=DEFAULTSECT)
+            for k_c in config_load.data[DEFAULTSECT].keys():
+                if (k == k_c) or (type(_c[k_c]) is type(config_load[k_c])):
+                    # casted values must be equal(when k==k_c)
+                    assert _compare(_c, sampleconfig_cast, k_c)
+                else:
+                    assert not _compare(_c, sampleconfig_cast, k_c)
+
+            assert _compare(config_load, sampleconfig_cast, k)
+
+    @pytest.mark.parametrize("cast", [False, True])
+    @pytest.mark.parametrize("strict_cast", [False, True])
+    def test_cast_failed(self, sampleconfig: Config, cast: bool, strict_cast: bool):
+        c = Config({"x": {"a":10, "b":12}}, cast=cast, strict_cast=strict_cast)
+        c.section = "x"
+        _subst = False
+        if cast:
+            if strict_cast:
+                with pytest.raises(ValueError):
+                    c["a"] = "abc"
+            else:
+                # warn
+                _subst = True
+        else:
+            _subst = True
+        if _subst:
+            c["a"] = "abc"
+            assert c["a"] == "abc"
+
+
 
     def test_save(self, sampleconfig: Config):
         data = dict(hoge=dict(fuga=5))
