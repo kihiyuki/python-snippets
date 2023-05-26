@@ -9,11 +9,11 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.1.1"
+__version__ = "2.2.0"
 __all__ = [
     "Config",
 ]
-DEFAULT_FILENAME: Optional[str] = "./config.ini"
+DEFAULTFILE: Optional[str] = "config.ini"
 
 
 def _have_section(data: dict) -> bool:
@@ -65,7 +65,7 @@ def _init_configdict(
 class Config(object):
     def __init__(
         self,
-        __d: Union[str, Path, dict, None] = DEFAULT_FILENAME,
+        __d: Union[str, Path, dict, None] = DEFAULTFILE,
         section: str = DEFAULTSECT,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
@@ -82,7 +82,7 @@ class Config(object):
             encoding: File encoding
             notfound_ok: If True, return empty dict.
             default: Default values
-            cast: If True, cast to type of default value.
+            cast: If True, cast to type of default value automatically.
             strict_cast: If False, cast as much as possible.
             strict_key: If False, keys can be added.
 
@@ -177,22 +177,15 @@ class Config(object):
         self,
         __key: Optional[Any] = None,
         section: Optional[str] = None,
-        value: Optional[str] = None,
-        value_default: Optional[Any] = None,
     ) -> Optional[Any]:
         """Cast to type of default value
 
         Example:
             >>> config.cast()
             >>> config.cast("key1")
-            >>> config.cast(value="2", value_default=0)
+            >>> config.cast("key1", section="debug")
         """
-        if value is not None:
-            if value_default is not None:
-                return self._cast_value(value, value_default)
-            else:
-                raise ValueError("If value is set, value_default is required")
-        elif section is None:
+        if section is None:
             _sections = self.data.keys()
         else:
             _sections = [section]
@@ -264,7 +257,7 @@ class Config(object):
             for k, v in data[s].items():
                 if k in data_ret[s]:
                     if self._cast:
-                        v = self.cast(value=v, value_default=data_ret[s][k])
+                        v = self._cast_value(v, data_ret[s][k])
                 elif self._strict_key:
                     raise KeyError(k)
                 data_ret[s][k] = v
