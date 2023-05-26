@@ -36,6 +36,9 @@ def _init_configdict(
 
     data_ret = dict()
     for s, d in data.items():
+        if type(s) is not str:
+            warn(f"Convert section name to string: {s} -> '{s}'")
+            s = str(s)
         data_ret[s] = dict()
 
         for k, v in d.items():
@@ -104,13 +107,13 @@ class Config(object):
         )
 
         if __d is None:
-            self.data = {section: {}}
+            self.data = {self.section: {}}
         else:
             if type(__d) is dict:
                 file = None
                 data = __d
                 if not self._have_section(data):
-                    data = {section: data}
+                    data = {self.section: data}
             else:
                 file = __d
                 data = None
