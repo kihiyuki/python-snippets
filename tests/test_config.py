@@ -168,6 +168,27 @@ class TestConfig(object):
 
             assert _compare(config_load, sampleconfig_cast, k)
 
+    @pytest.mark.parametrize("cast", [False, True])
+    @pytest.mark.parametrize("strict_cast", [False, True])
+    def test_cast_failed(self, sampleconfig: Config, cast: bool, strict_cast: bool):
+        c = Config({"x": {"a":10, "b":12}}, cast=cast, strict_cast=strict_cast)
+        c.section = "x"
+        _subst = False
+        if cast:
+            if strict_cast:
+                with pytest.raises(ValueError):
+                    c["a"] = "abc"
+            else:
+                # warn
+                _subst = True
+        else:
+            _subst = True
+        if _subst:
+            c["a"] = "abc"
+            assert c["a"] == "abc"
+
+
+
     def test_save(self, sampleconfig: Config):
         data = dict(hoge=dict(fuga=5))
         # invalid mode

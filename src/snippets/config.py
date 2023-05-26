@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 __all__ = [
     "Config",
 ]
@@ -323,7 +323,7 @@ class Config(object):
                 self.data[self.section] = dict()
 
         if __key in self.data[self.section].keys():
-            if self.cast:
+            if self._cast:
                 try:
                     __value = type(self.data[self.section][__key])(__value)
                 except ValueError as e:
