@@ -175,14 +175,12 @@ class TestConfig(object):
         if strict_key:
             with pytest.raises(KeyError):
                 c["c"] = 20
-            with pytest.raises(KeyError):
-                c["A"] = 22
         else:
             c["c"] = 20
             c["A"] = 22
             assert c.data["x"]["c"] == 20
-            assert c.data["x"]["a"] == 10
-            assert c.data["x"]["A"] == 22
+        c["A"] = 22
+        assert c.data["x"]["a"] == 22
 
     @pytest.mark.parametrize("cast", [False, True])
     @pytest.mark.parametrize("strict_cast", [False, True])
