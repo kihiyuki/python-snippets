@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 __all__ = [
     "Config",
 ]
@@ -129,9 +129,54 @@ class Config(object):
             )
         return None
 
+    def _cast_value(self, __v: str, __v_def: Any) -> Any:
+        try:
+            _type = type(__v_def)
+            _raise = False
+            if _type in [str]:
+                pass
+            elif _type in [float, int]:
+                __v = _type(__v)
+            elif _type in [bool]:
+                if __v.lower() in ["true", "1"]:
+                    __v = True
+                elif __v.lower() in ["false", "0"]:
+                    __v = False
+                else:
+                    _raise = True
+            elif _type in [list]:
+                if __v.startswith("[") and __v.endswith("]"):
+                    __v = eval(__v)
+                else:
+                    __v = __v.split(",")
+            elif _type in [tuple]:
+                if __v.startswith("(") and __v.endswith(")"):
+                    __v = eval(__v)
+                else:
+                    __v = tuple(__v.split(","))
+            elif _type in [set]:
+                if __v.startswith("{") and __v.endswith("}"):
+                    __v = eval(__v)
+                else:
+                    __v = set(__v.split(","))
+            elif _type in [dict]:
+                if __v.startswith("{") and __v.endswith("}"):
+                    __v = eval(__v)
+                else:
+                    __v = dict(tuple(x.split(":")) for x in __v.split(","))
+            if _raise:
+                raise ValueError(f'{_type.__name__}("{__v}")')
+        except ValueError as e:
+            if self._strict_cast:
+                raise ValueError(e)
+            else:
+                warn(f"cast failed: {e}")
+        return __v
+
     def cast(
         self,
         __key: Optional[Any] = None,
+        section: Optional[str] = None,
         value: Optional[str] = None,
         value_default: Optional[Any] = None,
     ) -> Optional[Any]:
@@ -142,61 +187,23 @@ class Config(object):
             >>> config.cast("key1")
             >>> config.cast(value="2", value_default=0)
         """
-        def __cast_single(__v: str, __v_def: Any) -> Any:
-            try:
-                _type = type(__v_def)
-                _raise = False
-                if _type in [str]:
-                    pass
-                elif _type in [float, int]:
-                    __v = _type(__v)
-                elif _type in [bool]:
-                    if __v.lower() in ["true", "1"]:
-                        __v = True
-                    elif __v.lower() in ["false", "0"]:
-                        __v = False
-                    else:
-                        _raise = True
-                elif _type in [list]:
-                    if __v.startswith("[") and __v.endswith("]"):
-                        __v = eval(__v)
-                    else:
-                        __v = __v.split(",")
-                elif _type in [tuple]:
-                    if __v.startswith("(") and __v.endswith(")"):
-                        __v = eval(__v)
-                    else:
-                        __v = tuple(__v.split(","))
-                elif _type in [set]:
-                    if __v.startswith("{") and __v.endswith("}"):
-                        __v = eval(__v)
-                    else:
-                        __v = set(__v.split(","))
-                elif _type in [dict]:
-                    if __v.startswith("{") and __v.endswith("}"):
-                        __v = eval(__v)
-                    else:
-                        __v = dict(tuple(x.split(":")) for x in __v.split(","))
-                if _raise:
-                    raise ValueError(f'{_type.__name__}("{__v}")')
-            except ValueError as e:
-                if self._strict_cast:
-                    raise ValueError(e)
-                else:
-                    warn(f"cast failed: {e}")
-            return __v
-
         if value is not None:
             if value_default is not None:
-                return __cast_single(value, value_default)
+                return self._cast_value(value, value_default)
             else:
                 raise ValueError("If value is set, value_default is required")
-        elif __key is not None:
-            self.data[__key] = __cast_single(self.data[__key], self.default[__key])
+        elif section is None:
+            _sections = self.data.keys()
         else:
-            for k in self.data.keys():
-                if k in self.default.keys():
-                    self.data[k] = __cast_single(self.data[k], self.default[k])
+            _sections = [section]
+
+        for s in _sections:
+            if __key is not None:
+                self.data[s][__key] = self._cast_value(self.data[s][__key], self.default[s][__key])
+            else:
+                for k in self.data[s].keys():
+                    if k in self.default[s].keys():
+                        self.data[s][k] = self._cast_value(self.data[s][k], self.default[s][k])
         return None
 
     def _load(
