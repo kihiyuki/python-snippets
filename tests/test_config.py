@@ -147,19 +147,25 @@ class TestConfig(object):
         assert config_load.data[DEFAULTSECT].keys() == sampleconfig_cast.data[DEFAULTSECT].keys()
 
         def _compare(c1, c2, _k):
-            if type(c2[_k]) is float:
+            if (type(c1[_k]) is float) and (type(c2[_k]) is float):
                 return math.isclose(c1[_k], c2[_k])
             else:
                 return c1[_k] == c2[_k]
 
         for k in config_load.data[DEFAULTSECT].keys():
-            # _c = config_load_str.copy()
-            # _c.cast(k, section=DEFAULTSECT)
-            # for k_c in config_load.data[DEFAULTSECT].keys():
-            #     if (k == k_c) or (type(_c[k]) is type(config_load[k_c])):
-            #         assert _compare(_c, sampleconfig_cast, k_c)
-            #     else:
-            #         assert not _compare(_c, sampleconfig_cast, k_c)
+            _c = config_load_str.copy()
+            for k in _c.data[DEFAULTSECT].keys():
+                # check if the data copied correctly
+                assert type(_c.data[DEFAULTSECT][k]) is str
+            # cast by key
+            _c.cast(k, section=DEFAULTSECT)
+            for k_c in config_load.data[DEFAULTSECT].keys():
+                if (k == k_c) or (type(_c[k_c]) is type(config_load[k_c])):
+                    # casted values must be equal(when k==k_c)
+                    assert _compare(_c, sampleconfig_cast, k_c)
+                else:
+                    assert not _compare(_c, sampleconfig_cast, k_c)
+
             assert _compare(config_load, sampleconfig_cast, k)
 
     def test_save(self, sampleconfig: Config):

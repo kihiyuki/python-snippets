@@ -291,14 +291,25 @@ class Config(object):
         else:
             return self.data[self.section].copy()
 
-    def copy(self):
+    def copy(
+        self,
+        cast: Optional[bool] = None,
+        strict_key: Optional[bool] = None,
+        strict_cast: Optional[bool] = None,
+        ):
+        if cast is None:
+            cast = self._cast
+        if strict_key is None:
+            strict_key = self._strict_key
+        if strict_cast is None:
+            strict_cast = self._strict_cast
         return type(self)(
             self.data,
             section=self.section,
             default=self.default,
-            cast=self.cast,
-            strict_cast=self._strict_cast,
-            strict_key=self._strict_key,
+            cast=cast,
+            strict_cast=strict_cast,
+            strict_key=strict_key,
         )
 
     def __getitem__(self, __key):
