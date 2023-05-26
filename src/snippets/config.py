@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 __all__ = [
     "Config",
 ]
@@ -252,8 +252,11 @@ class Config(object):
             if s in self.default:
                 # initialize with default values
                 data_ret[s] = self.default[s].copy()
+                _empty_default = len(self.default[s]) == 0
             else:
                 data_ret[s] = dict()
+                _empty_default = True
+
             if s not in data.keys():
                 continue
             for k, v in data[s].items():
@@ -261,7 +264,10 @@ class Config(object):
                     if self._cast:
                         v = self._cast_value(v, data_ret[s][k])
                 elif self._strict_key:
-                    raise KeyError(k)
+                    if _empty_default:
+                        pass
+                    else:
+                        raise KeyError(k)
                 data_ret[s][k] = v
 
         return data_ret

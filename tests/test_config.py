@@ -168,9 +168,25 @@ class TestConfig(object):
 
             assert _compare(config_load, sampleconfig_cast, k)
 
+    @pytest.mark.parametrize("strict_key", [False, True])
+    def test_strict_key(self, strict_key: bool):
+        c = Config({"x": {"A":10, "B":12}}, strict_key=strict_key)
+        c.section = "x"
+        if strict_key:
+            with pytest.raises(KeyError):
+                c["c"] = 20
+            with pytest.raises(KeyError):
+                c["A"] = 22
+        else:
+            c["c"] = 20
+            c["A"] = 22
+            assert c.data["x"]["c"] == 20
+            assert c.data["x"]["a"] == 10
+            assert c.data["x"]["A"] == 22
+
     @pytest.mark.parametrize("cast", [False, True])
     @pytest.mark.parametrize("strict_cast", [False, True])
-    def test_cast_failed(self, sampleconfig: Config, cast: bool, strict_cast: bool):
+    def test_strict_cast(self, cast: bool, strict_cast: bool):
         c = Config({"x": {"a":10, "b":12}}, cast=cast, strict_cast=strict_cast)
         c.section = "x"
         _subst = False
