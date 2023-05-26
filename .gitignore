@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# python-snippets
+tmp/
+*.ipynb
+[0-9]*.py
+hoge*
+fuga*
