@@ -87,7 +87,8 @@ class Config(object):
         self._strict_key = strict_key
 
         self.filepath: Path
-        self.default: dict
+        self.default: Dict[Any, dict]
+        self.data: Dict[Any, dict]
         # self.parser = ConfigParser()
 
         if type(section) is not str:
