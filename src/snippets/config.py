@@ -45,18 +45,15 @@ def _init_configdict(
 
     data_ret = dict()
     for s, d in data.items():
-        if type(s) is not str:
-            warn(f"Section name must be string: s -> '{s}'")
-            s = str(s)
         data_ret[s] = dict()
 
         for k, v in d.items():
             if type(k) is not str:
-                warn(f"Key must be string: {k} -> '{k}'")
+                warn(f"Convert key to string: {k} -> '{k}'")
                 k = str(k)
             k_lower = k.lower()
             if k != k_lower:
-                warn(f"Key must be lowercase: '{k}' -> '{k_lower}'")
+                warn(f"Conver key to lowercase: '{k}' -> '{k_lower}'")
             data_ret[s][k_lower] = v
 
     return data_ret
@@ -91,7 +88,6 @@ class Config(object):
             ValueError: If `strict_cast` is True and failed to cast.
             KeyError: If `strict_key` is True and some keys of configfile is not in default.
         """
-        self.section = section
         self._cast = cast
         self._strict_cast = strict_cast
         self._strict_key = strict_key
@@ -100,13 +96,19 @@ class Config(object):
         self.default: dict
         # self.parser = ConfigParser()
 
+        if type(section) is not str:
+            warn(f"Convert section name to string: {section} -> '{section}'")
+            self.section = str(section)
+        else:
+            self.section = section
+
         if default is None:
-            default = {section: {}}
+            default = {self.section: {}}
         if not _have_section(default):
-            default = {section: default}
+            default = {self.section: default}
         self.default = _init_configdict(
             default,
-            # section=section,
+            section=self.section,
             # auto_sectionalize=True,
         )
 

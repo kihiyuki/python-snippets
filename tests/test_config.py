@@ -93,6 +93,11 @@ class TestConfig(object):
         c.update({"xxx": {}})
         assert config_load == c
 
+    def test_section_int(self, sampleconfig: Config):
+        config_load = Config(dict(n=11, m=12), section=123)
+        assert config_load.section == "123"
+        # assert config_load["123"] == sampleconfig
+
     def test_load_default(self, sampleconfig: Config):
         default = dict(n=11, m=12)
         config_load = Config(CONFIGFILE, section="a", default=default)
