@@ -16,21 +16,12 @@ __all__ = [
 DEFAULTFILE: Optional[str] = "config.ini"
 
 
-def _have_section(data: dict) -> bool:
-    have_section = True
-    for v in data.values():
-        if not isinstance(v, dict):
-            have_section = False
-            break
-    return have_section
-
-
 def _init_configdict(
     data: dict,
     section: Optional[str] = None,
     auto_sectionalize: bool = False,
 ) -> Dict[str, dict]:
-    if _have_section(data):
+    if Config._have_section(data):
         if section is None:
             pass
         elif section not in data:
@@ -104,7 +95,7 @@ class Config(object):
 
         if default is None:
             default = {self.section: {}}
-        if not _have_section(default):
+        if not self._have_section(default):
             default = {self.section: default}
         self.default = _init_configdict(
             default,
@@ -118,7 +109,7 @@ class Config(object):
             if type(__d) is dict:
                 file = None
                 data = __d
-                if not _have_section(data):
+                if not self._have_section(data):
                     data = {section: data}
             else:
                 file = __d
@@ -130,6 +121,11 @@ class Config(object):
                 notfound_ok=notfound_ok,
             )
         return None
+
+    @staticmethod
+    def _have_section(data: dict) -> bool:
+        """Check if all values of 'data' are dictionaries"""
+        return all([isinstance(v, dict) for v in data.values()])
 
     def _cast_value(self, __v: str, __v_def: Any) -> Any:
         try:
@@ -223,7 +219,7 @@ class Config(object):
             else:
                 raise FileNotFoundError(file)
         elif data is not None:
-            if _have_section(data):
+            if self._have_section(data):
                 pass
             elif section is not None:
                 data = {section: data}
