@@ -48,7 +48,8 @@ def _init_configdict(
             k_lower = k.lower()
             if k != k_lower:
                 warn(f"Conver key to lowercase: '{k}' -> '{k_lower}'")
-            data_ret[s][k_lower] = v
+                k = k_lower
+            data_ret[s][k] = v
 
     return data_ret
 
@@ -318,10 +319,24 @@ class Config(object):
             strict_key=strict_key,
         )
 
-    def __getitem__(self, __key):
+    def __getitem__(self, __key: str):
+        if type(__key) is not str:
+            warn(f"Convert key to string: {__key} -> '{__key}'")
+            __key = str(__key)
+        k_lower = __key.lower()
+        if __key != k_lower:
+            warn(f"Conver key to lowercase: '{__key}' -> '{k_lower}'")
+            __key = k_lower
         return self.data[self.section][__key]
 
-    def __setitem__(self, __key, __value) -> None:
+    def __setitem__(self, __key: str, __value) -> None:
+        if type(__key) is not str:
+            warn(f"Convert key to string: {__key} -> '{__key}'")
+            __key = str(__key)
+        k_lower = __key.lower()
+        if __key != k_lower:
+            warn(f"Conver key to lowercase: '{__key}' -> '{k_lower}'")
+            __key = k_lower
         if self.section not in self.data.keys():
             if self._strict_key:
                 raise KeyError(self.section)
