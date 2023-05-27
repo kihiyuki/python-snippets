@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.2.2"
+__version__ = "2.2.3"
 __all__ = [
     "Config",
 ]
@@ -61,7 +61,6 @@ class Config(object):
         self.default = self._init_configdict(
             default,
             section=self.section,
-            # auto_sectionalize=True,
         )
 
         if __d is None:
@@ -115,7 +114,6 @@ class Config(object):
         self,
         data: dict,
         section: Optional[str] = None,
-        auto_sectionalize: bool = False,
     ) -> Dict[str, dict]:
         if self._have_section(data):
             if section is None:
@@ -124,10 +122,7 @@ class Config(object):
                 data[section] = dict()
         else:
             if section is None:
-                if auto_sectionalize:
-                    section = DEFAULTSECT
-                else:
-                    raise ValueError("Configdata must have section")
+                raise ValueError("Configdata must have section")
             data = {section: data}
 
         data_ret = dict()
@@ -239,7 +234,6 @@ class Config(object):
                 data = {section: data}
             data = self._init_configdict(
                 data,
-                auto_sectionalize=True,
             )
         else:
             raise ValueError("Both file and data are None")
