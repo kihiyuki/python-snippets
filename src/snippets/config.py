@@ -249,7 +249,7 @@ class Config(object):
         # add default sections
         for s in self.default.keys():
             if s not in sections_load:
-                sections_load.append(k)
+                sections_load.append(s)
 
         data_ret: _DT = dict()
         for s in sections_load:
