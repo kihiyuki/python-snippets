@@ -139,24 +139,35 @@ class TestConfig(object):
         c["a"]["m"] = 12
         assert config_load == c
 
-    def test_load_default_cast(self, sampleconfig_cast: Config):
-        config_load = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=True)
-        config_load_str = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=False)
-        for k in config_load_str.data[DEFAULTSECT].keys():
-            config_load_str.data[DEFAULTSECT][k] = str(config_load_str.data[DEFAULTSECT][k])
-        assert config_load.data[DEFAULTSECT].keys() == sampleconfig_cast.data[DEFAULTSECT].keys()
-
+    def test_load_cast(self, sampleconfig_cast: Config):
         def _compare(c1, c2, _k):
             if (type(c1[_k]) is float) and (type(c2[_k]) is float):
                 return math.isclose(c1[_k], c2[_k])
             else:
                 return c1[_k] == c2[_k]
 
+        config_load = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=True)
+        assert config_load.data[DEFAULTSECT].keys() == sampleconfig_cast.data[DEFAULTSECT].keys()
+
+        config_load_str = Config(CONFIGFILE, default=sampleconfig_cast.to_dict(allsection=True), cast=False)
+        for k in config_load_str.data[DEFAULTSECT].keys():
+            config_load_str.data[DEFAULTSECT][k] = str(config_load_str.data[DEFAULTSECT][k])
+
+        _c = config_load_str.copy()
+        for k in _c.data[DEFAULTSECT].keys():
+            # check if the data copied correctly
+            assert type(_c.data[DEFAULTSECT][k]) is str
+        _c.cast()
+        for k in _c.data[DEFAULTSECT].keys():
+            assert _compare(_c, sampleconfig_cast, k)
+        _c = config_load_str.copy()
+        for k in _c.data[DEFAULTSECT].keys():
+            # check if the data copied correctly
+            # (after cast)
+            assert type(_c.data[DEFAULTSECT][k]) is str
+
         for k in config_load.data[DEFAULTSECT].keys():
             _c = config_load_str.copy()
-            for k in _c.data[DEFAULTSECT].keys():
-                # check if the data copied correctly
-                assert type(_c.data[DEFAULTSECT][k]) is str
             # cast by key
             _c.cast(k, section=DEFAULTSECT)
             for k_c in config_load.data[DEFAULTSECT].keys():
@@ -173,12 +184,30 @@ class TestConfig(object):
         c = Config({"x": {"A":10, "B":12}}, strict_key=strict_key)
         c.section = "x"
         if strict_key:
+            c.section = "y"
+            with pytest.raises(KeyError):
+                c["a"] = 30
+            c.section = "x"
+
             with pytest.raises(KeyError):
                 c["c"] = 20
+            with pytest.raises(KeyError):
+                c[1] = 24
         else:
+            c.section = "y"
+            c["a"] = 30
+            assert c.data["x"]["a"] == 10
+            assert c.data["y"]["a"] == 30
+            assert c["a"] == 30
+            c.section = "x"
+            assert c["a"] == 10
+
             c["c"] = 20
-            c["A"] = 22
             assert c.data["x"]["c"] == 20
+            c[1] = 24
+            assert c.data["x"]["1"] == 24
+            assert c[1] == 24
+
         c["A"] = 22
         assert c.data["x"]["a"] == 22
 
