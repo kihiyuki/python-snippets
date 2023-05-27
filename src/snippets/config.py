@@ -14,16 +14,17 @@ __all__ = [
     "Config",
 ]
 DEFAULTFILE: Optional[str] = "config.ini"
-
+_DDT = Dict[str, Dict[str, Any]]
+_DT = Dict[str, _DDT]
 
 class Config(object):
     def __init__(
         self,
-        __d: Union[str, Path, dict, None] = DEFAULTFILE,
+        __d: Union[str, Path, Dict[str, Any], Dict[str, Dict[str, Any]], None] = DEFAULTFILE,
         section: str = DEFAULTSECT,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
-        default: Optional[dict] = None,
+        default: Union[Dict[str, Any], Dict[str, Dict[str, Any]], None] = None,
         cast: bool = False,
         strict_cast: bool = False,
         strict_key: bool = False,
@@ -50,14 +51,12 @@ class Config(object):
         self._strict_key = strict_key
 
         self.filepath: Path
-        self.default: Dict[Any, dict]
-        self.data: Dict[Any, dict]
+        self.default: _DT
+        self.data: _DT
         self.section: str = self._autocorrect(section, name="section name")
 
         if default is None:
             default = {self.section: {}}
-        if not self._have_section(default):
-            default = {self.section: default}
         self.default = self._init_configdict(
             default,
             section=self.section,
@@ -83,7 +82,7 @@ class Config(object):
         return None
 
     @staticmethod
-    def _have_section(data: dict) -> bool:
+    def _have_section(data: _DDT) -> bool:
         """Check if all values of data are dict"""
         return all([isinstance(v, dict) for v in data.values()])
 
@@ -112,7 +111,7 @@ class Config(object):
     # @staticmethod
     def _init_configdict(
         self,
-        data: dict,
+        data: _DDT,
         section: Optional[str] = None,
     ) -> Dict[str, dict]:
         if self._have_section(data):
@@ -125,7 +124,8 @@ class Config(object):
                 raise ValueError("Configdata must have section")
             data = {section: data}
 
-        data_ret = dict()
+        data: _DT
+        data_ret: _DT = dict()
         for s, d in data.items():
             s = self._autocorrect(s, name="section name")
             data_ret[s] = dict()
@@ -209,11 +209,11 @@ class Config(object):
     def _load(
         self,
         file: Union[str, Path, None] = None,
-        data: Optional[dict] = None,
+        data: Union[_DT, _DDT, None] = None,
         section: Optional[str] = None,
         encoding: Optional[str] = None,
         notfound_ok: bool = False,
-    ) -> dict:
+    ) -> _DT:
         if (file is not None) and (data is not None):
             raise ValueError("Both file and data are given")
         elif file is not None:
@@ -228,12 +228,9 @@ class Config(object):
             else:
                 raise FileNotFoundError(file)
         elif data is not None:
-            if self._have_section(data):
-                pass
-            elif section is not None:
-                data = {section: data}
             data = self._init_configdict(
-                data,
+                data=data,
+                section=section,
             )
         else:
             raise ValueError("Both file and data are None")
@@ -251,7 +248,7 @@ class Config(object):
             if k not in sections_load:
                 sections_load.append(k)
 
-        data_ret = dict()
+        data_ret: _DT = dict()
         for s in sections_load:
             if s in self.default:
                 # initialize with default values
@@ -277,13 +274,13 @@ class Config(object):
         return data_ret
 
     @staticmethod
-    def __parser_to_dict(__p: ConfigParser) -> dict:
+    def __parser_to_dict(__p: ConfigParser) -> _DT:
         d = dict()
         for k, v in __p.items():
             d[k] = dict(v)
         return d
 
-    def to_dict(self, allsection: bool = False) -> dict:
+    def to_dict(self, allsection: bool = False) -> Union[_DT, _DDT]:
         """Convert to dict
 
         Example:
