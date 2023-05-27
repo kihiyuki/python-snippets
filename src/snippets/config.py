@@ -73,9 +73,12 @@ class Config(object):
             else:
                 file = __d
                 data = None
+
+            # load all sections(section = None)
             self.data = self._load(
                 file=file,
                 data=data,
+                section=None,
                 encoding=encoding,
                 notfound_ok=notfound_ok,
             )
@@ -244,13 +247,13 @@ class Config(object):
             sections_load = [DEFAULTSECT] + sections_load
 
         # add default sections
-        for k in self.default.keys():
-            if k not in sections_load:
+        for s in self.default.keys():
+            if s not in sections_load:
                 sections_load.append(k)
 
         data_ret: _DT = dict()
         for s in sections_load:
-            if s in self.default:
+            if s in self.default.keys():
                 # initialize with default values
                 data_ret[s] = self.default[s].copy()
                 _empty_default = len(self.default[s]) == 0
@@ -350,16 +353,14 @@ class Config(object):
         return f"{__class__.__name__}({repr(self.data)})"
 
     def __eq__(self, __o: Any) -> bool:
-        if isinstance(__o, Config):
+        if isinstance(__o, type(self)):
             # Config vs Config
-            if self.to_dict(allsection=True) == __o.to_dict(allsection=True):
-                return True
+            return self.to_dict(allsection=True) == __o.to_dict(allsection=True)
         elif isinstance(__o, ConfigParser):
             # Config vs ConfigParser
             parser = ConfigParser()
             parser.read_dict(self.data)
-            if parser == __o:
-                return True
+            return parser == __o
         elif type(__o) is dict:
             # Config vs dict
             data = self.to_dict(allsection=True)
@@ -367,8 +368,7 @@ class Config(object):
                 return True
             if len(data[DEFAULTSECT]) == 0:
                 del data[DEFAULTSECT]
-                if data == __o:
-                    return True
+                return data == __o
         return False
 
     def save(
