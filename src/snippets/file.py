@@ -1,6 +1,8 @@
 # https://github.com/kihiyuki/python-snippets
 # Copyright (c) 2022 kihiyuki
 # Released under the MIT license
+# Supported Python versions: 3.7, 3.8, 3.9, 3.10, 3.11
+# Requires: chardet (If not installed, some functions cannot be used.)
 from typing import Optional, List
 from pathlib import Path
 import gzip

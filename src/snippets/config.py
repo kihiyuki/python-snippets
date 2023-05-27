@@ -1,6 +1,8 @@
 # https://github.com/kihiyuki/python-snippets
 # Copyright (c) 2022 kihiyuki
 # Released under the MIT license
+# Supported Python versions: 3.7, 3.8, 3.9, 3.10, 3.11
+# Requires: (using only Python Standard Library)
 import shutil
 from configparser import ConfigParser, DEFAULTSECT
 from datetime import datetime
