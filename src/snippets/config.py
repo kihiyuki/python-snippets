@@ -143,46 +143,51 @@ class Config(object):
 
     def _cast_value(self, __v: str, __v_def: Any) -> Any:
         try:
-            _type = type(__v_def)
+            _typename = type(__v_def).__name__
+            # NOTE: bool must come before int
+            for _type in [str, bool, float, int, list, tuple, set, dict]:
+                if isinstance(__v_def, _type):
+                    _typename = _type.__name__
+                    break
             _raise = False
-            if _type in [str]:
+            if _typename in {"str"}:
                 pass
-            elif _type in [float, int]:
+            elif _typename in {"float", "int"}:
                 __v = _type(__v)
-            elif _type in [bool]:
-                if __v.lower() in ["true", "1"]:
+            elif _typename in {"bool"}:
+                if __v.lower() in {"true", "1"}:
                     __v = True
-                elif __v.lower() in ["false", "0"]:
+                elif __v.lower() in {"false", "0"}:
                     __v = False
                 else:
                     _raise = True
-            elif _type in [list]:
+            elif _typename in {"list"}:
                 if __v.startswith("[") and __v.endswith("]"):
                     __v = eval(__v)
                 else:
                     __v = __v.split(",")
-            elif _type in [tuple]:
+            elif _typename in {"tuple"}:
                 if __v.startswith("(") and __v.endswith(")"):
                     __v = eval(__v)
                 else:
                     __v = tuple(__v.split(","))
-            elif _type in [set]:
+            elif _typename in {"set"}:
                 if __v.startswith("{") and __v.endswith("}"):
                     __v = eval(__v)
                 else:
                     __v = set(__v.split(","))
-            elif _type in [dict]:
+            elif _typename in {"dict"}:
                 if __v.startswith("{") and __v.endswith("}"):
                     __v = eval(__v)
                 else:
                     __v = dict(tuple(x.split(":")) for x in __v.split(","))
             if _raise:
-                raise ValueError(f'{_type.__name__}("{__v}")')
+                raise ValueError(f'{_typename}("{__v}")')
         except ValueError as e:
             if self._strict_cast:
                 raise ValueError(e)
             else:
-                warn(f"cast failed: {e}")
+                warn(f"cast failed: {e}", UserWarning)
         return __v
 
     def cast(
