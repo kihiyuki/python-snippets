@@ -52,7 +52,7 @@ class Config(object):
         self._strict_cast = strict_cast
         self._strict_key = strict_key
 
-        self.filepath: Path
+        self.filepath: Optional[Path] = None
         self.default: _DT
         self.data: _DT
         self.section: str = self._autocorrect(section, name="section name")
@@ -229,6 +229,7 @@ class Config(object):
                     parser.read_file(f)
                 data = self.__parser_to_dict(parser)
             elif notfound_ok:
+                warn(f"No such file or directory: {str(self.filepath)}", UserWarning)
                 data = {DEFAULTSECT: {}}
             else:
                 raise FileNotFoundError(file)
@@ -396,9 +397,14 @@ class Config(object):
             ValueError: If `mode` is unknown
         """
         if file is None:
-            filepath = self.filepath
+            if self.filepath is None:
+                raise ValueError("filepath is not set")
+            else:
+                filepath = self.filepath
         else:
             filepath = Path(file)
+        # if not filepath.parent.is_dir():
+        #     raise FileNotFoundError(filepath.parent)
 
         if section is None:
             data = self.data

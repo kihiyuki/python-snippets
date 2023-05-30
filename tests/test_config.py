@@ -105,6 +105,22 @@ class TestConfig(object):
         config_load = Config(".INVALID", notfound_ok=True)
         assert config_load == EMPTYDICT
 
+        # load specific section
+        c = Config(None)
+        d = c._load(file=CONFIGFILE, section="a")
+        assert set(d.keys()) == {DEFAULTSECT, "a"}
+        c = Config(None)
+        d = c._load(data=sampleconfig.data, section="a")
+        assert set(d.keys()) == {DEFAULTSECT, "a"}
+
+        c = Config(None)
+        with pytest.raises(ValueError):
+            # both are None
+            c._load()
+        with pytest.raises(ValueError):
+            # both are set
+            c._load(file=CONFIGFILE, data={"a": 1})
+
     def test_load_section(self, sampleconfig: Config):
         # load all section when choose a section
         config_load = Config(CONFIGFILE, section="a")
@@ -229,8 +245,6 @@ class TestConfig(object):
         if _subst:
             c["a"] = "abc"
             assert c["a"] == "abc"
-
-
 
     def test_save(self, sampleconfig: Config):
         data = dict(hoge=dict(fuga=5))
