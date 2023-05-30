@@ -155,6 +155,21 @@ class TestConfig(object):
         c["a"]["m"] = 12
         assert config_load == c
 
+    @pytest.mark.parametrize("type_", [list, tuple, set])
+    def test_cast_commasep(self, type_):
+        value = ["aA:*", "1", "0.0", "True"]
+        value_str = ",".join(value)
+        value = type_(value)
+        c = Config({"value": value_str}, default={"value": value}, section=DEFAULTSECT, cast=True, strict_cast=True)
+        assert c["value"] == value
+
+    @pytest.mark.skip("misjudgment: has_section(value) == True")
+    def test_cast_commasep_dict(self):
+        value = {"a": "1", "B": "0.0"}
+        value_str = "a:1,B:0.0"
+        c = Config({"value": value_str}, default={"value": value}, section=DEFAULTSECT, cast=True, strict_cast=True)
+        assert c["value"] == value
+
     def test_load_cast(self, sampleconfig_cast: Config):
         def _compare(c1, c2, _k):
             if (type(c1[_k]) is float) and (type(c2[_k]) is float):
@@ -251,7 +266,14 @@ class TestConfig(object):
         # invalid mode
         with pytest.raises(ValueError):
             config = Config(data)
-            config.save(CONFIGFILE, mode="x")
+            config.save(CONFIGFILE, mode="hoge")
+
+        # save specific section
+        sampleconfig.save(CONFIGFILE, section="a", mode="w")
+        c = Config(CONFIGFILE)
+        assert set(c.data.keys()) == {DEFAULTSECT, "a"}
+        assert c.data[DEFAULTSECT] == {}
+        assert c.data["a"] == sampleconfig.data["a"]
 
     @pytest.mark.parametrize("mode", ["w", "Write", "OVERWRITE"])
     def test_save_write(self, sampleconfig: Config, mode):

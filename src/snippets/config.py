@@ -11,7 +11,7 @@ from typing import Optional, Union, Dict, Any
 from warnings import warn
 
 
-__version__ = "2.2.3"
+__version__ = "2.2.4"
 __all__ = [
     "Config",
 ]
